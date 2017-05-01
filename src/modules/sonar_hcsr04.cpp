@@ -1,8 +1,8 @@
-#include "../modules/sonar_hcsr04.h"
+#include "sonar_hcsr04.h"
 
 #include <stm32f10x_tim.h>
 #include <stm32f10x_exti.h>
-#include "../modules/timer.h"
+#include <timer.h>
 
 volatile uint16_t SonarValue;
 

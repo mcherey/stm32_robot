@@ -12,7 +12,7 @@
 #include "modules/sonar_hcsr04.h"
 #include "modules/spi.h"
 #include "modules/step_motor.h"
-#include "modules/timer.h"
+#include <timer.h>
 
 
 

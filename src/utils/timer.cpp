@@ -1,4 +1,4 @@
-#include "../modules/timer.h"
+#include "timer.h"
 
 static __IO uint32_t TimingDelay;
 
