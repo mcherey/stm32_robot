@@ -1,5 +1,5 @@
 
-#include "spi.h"
+#include "../modules/spi.h"
 
 static const uint16_t speeds[] = {
     [Spi::Speed::SLOW] = SPI_BaudRatePrescaler_64,

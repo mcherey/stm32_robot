@@ -6,13 +6,13 @@
 #include <stm32f10x_tim.h>
 #include <stm32f10x_exti.h>
 
-#include "my/step_motor.h"
-#include "my/servo_sg90.h"
-#include "my/timer.h"
-#include "my/sonar_hcsr04.h"
-#include "my/spi.h"
-#include "my/l298n_motor.h"
 #include <diag/Trace.h>
+#include "modules/l298n_motor.h"
+#include "modules/servo_sg90.h"
+#include "modules/sonar_hcsr04.h"
+#include "modules/spi.h"
+#include "modules/step_motor.h"
+#include "modules/timer.h"
 
 
 

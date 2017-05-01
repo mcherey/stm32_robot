@@ -1,4 +1,4 @@
-#include "l298n_motor.h"
+#include "../modules/l298n_motor.h"
 
 L298NMotor::L298NMotor(GPIO_TypeDef* gpio1, uint16_t enA, uint16_t inA1, uint16_t inA2,
                        uint16_t enB, uint16_t inB1, uint16_t inB2)

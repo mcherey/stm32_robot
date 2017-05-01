@@ -1,4 +1,5 @@
-#include "step_motor.h"
+#include "../modules/step_motor.h"
+
 #include <stm32f10x_gpio.h>
 
 StepMotor::StepMotor (GPIO_TypeDef* gpio, uint16_t in1, uint16_t in2, uint16_t in3,
