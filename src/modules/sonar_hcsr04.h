@@ -3,8 +3,9 @@
 #include <stm32f10x.h>
 #include <stm32f10x_gpio.h>
 #include <stm32f10x_tim.h>
+#include <sonar.h>
 
-class SonarHCSR04
+class SonarHCSR04 : public Robot::Sonar
 {
 public:
   //GPIOB GPIO_Pin_0 - input
@@ -12,8 +13,8 @@ public:
   SonarHCSR04(GPIO_TypeDef* triggerGPIOX, uint16_t triggerPin);
   virtual ~SonarHCSR04();
 
-  void Ping();
-  uint16_t GetLastResult();
+  virtual void Ping() override;
+  virtual uint16_t GetLastResult() override;
 
 private:
   TIM_TypeDef* TIMX;

@@ -1,21 +1,22 @@
-#include <stm32f10x.h>
-
 #pragma once
 
-class ServoSG90
+#include <stm32f10x.h>
+#include <servo.h>
+
+class ServoSG90 : public Robot::Servo
 {
 public:
   ServoSG90(TIM_TypeDef* tim, uint8_t timChannel, GPIO_TypeDef* gpio, uint16_t signalPort);
   virtual ~ServoSG90 ();
 
-  void Left();
-  void Right();
-  void Center();
+  virtual void Left();
+  virtual void Right();
+  virtual void Center();
 
-  bool IsCenter() const;
+  virtual bool IsCenter() const;
   //-90..90
-  void SetAngle(int8_t angle);
-  int8_t GetAngle() const;
+  virtual void SetAngle(int8_t angle);
+  virtual int8_t GetAngle() const;
 private:
   TIM_TypeDef* TIMX;
   int16_t Angle;

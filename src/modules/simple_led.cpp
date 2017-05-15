@@ -1,6 +1,6 @@
-#include <led.h>
+#include <simple_led.h>
 
-Led::Led(GPIO_TypeDef* gpio, uint16_t pin)
+SimpleLed::SimpleLed(GPIO_TypeDef* gpio, uint16_t pin)
   : GPIOX(gpio)
   , Pin(pin)
 {
@@ -13,11 +13,11 @@ Led::Led(GPIO_TypeDef* gpio, uint16_t pin)
   GPIO_ResetBits(GPIOX, Pin);
 }
 
-Led::~Led()
+SimpleLed::~SimpleLed()
 {
 }
 
-void Led::Enable(bool enable)
+void SimpleLed::Enable(bool enable)
 {
   if (enable)
   {
