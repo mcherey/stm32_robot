@@ -1,10 +1,8 @@
 #pragma once
 
-#ifdef _WIN32
-inline int trace_printf(const char* format, ...)
-{
-  return std::printf(format, ...);
-}
-#else
+#ifdef STM32F10X_MD
 #include <diag/Trace.h>
+#else
+#include <stdio.h>
+#define trace_printf(...) printf(__VA_ARGS__)
 #endif

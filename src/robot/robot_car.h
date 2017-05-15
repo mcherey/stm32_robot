@@ -3,7 +3,6 @@
 #include <motor.h>
 #include <monitor.h>
 #include <servo.h>
-#include <simple_led.h>
 #include <sonar.h>
 
 namespace Robot
