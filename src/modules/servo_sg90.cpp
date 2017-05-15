@@ -46,13 +46,18 @@ ServoSG90::~ServoSG90 ()
 void ServoSG90::Left()
 {
   Angle = -90;
-  TIM_SetCompare2(TIMX, 600);
+  TIM_SetCompare2(TIMX, 2500);
 }
 
 void ServoSG90::Right()
 {
   Angle = 90;
-  TIM_SetCompare2(TIMX, 2500);
+  TIM_SetCompare2(TIMX, 600);
+}
+
+bool ServoSG90::IsCenter() const
+{
+  return (Angle == 0);
 }
 
 void ServoSG90::Center()

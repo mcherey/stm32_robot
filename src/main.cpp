@@ -7,14 +7,13 @@
 #include <stm32f10x_exti.h>
 
 #include <diag/Trace.h>
-#include "modules/l298n_motor.h"
-#include "modules/servo_sg90.h"
-#include "modules/sonar_hcsr04.h"
-#include "modules/spi.h"
-#include "modules/step_motor.h"
+#include <l298n_motor.h>
+#include <servo_sg90.h>
+#include <sonar_hcsr04.h>
+#include <spi.h>
+#include <step_motor.h>
 #include <timer.h>
-
-
+#include <led.h>
 
 #ifdef USE_FULL_ASSERT
 void assert_failed(uint8_t* file, uint32_t line)
@@ -23,209 +22,277 @@ void assert_failed(uint8_t* file, uint32_t line)
 }
 #endif
 
-char L_Data[5];         // array data for left motor
-uint8_t L_index = 0;    // index of array L
-char R_Data[5];         // array data for right motor
-uint8_t R_index = 0;    // index of array R
-char H_Data[1];         // array data for additional channel
-uint8_t H_index = 0;    // index of array H
-char F_Data[8];         // array data for  Flash
-uint8_t F_index = 0;    // index of array F
-
-char command;           // command
-char incomingByte;
-int valueL, valueR;     // PWM value M1, M2
-
-
-void motor()
+struct State
 {
+  int8_t Action = 0;
+  int8_t PrevAction = 0;
+  uint16_t DistanceLeft = 0;
+  uint16_t DistanceRight = 0;
+  uint16_t DistanceCenter = 0;
+};
 
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-  L298NMotor motor(GPIOA, GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_7,
-                   GPIO_Pin_8, GPIO_Pin_9, GPIO_Pin_10);
-
-  while (1)
+struct Robot
+{
+  enum
   {
-    motor.Forward();
-    Delay(1000);
-    motor.Back();
-    Delay(1000);
-    motor.SoftStop();
-    Delay(1000);
-    motor.Left();
-    Delay(1000);
-    motor.Right();
-    Delay(1000);
-    motor.HardStop();
-    Delay(1000);
+    ACTION_STOP = 0,
+    ACTION_EXAMINATION,
+    ACTION_CHECK_OBSTACLE,
+    ACTION_ANALYZE,
+    ACTION_IDLE,
+    ACTION_GO_AHEAD,
+    ACTION_TURN_LEFT,
+    ACTION_TURN_RIGHT,
+    ACTION_GO_BACK
+  };
+
+  Led RedLed;
+  Led GreenLed;
+
+  SonarHCSR04& Eyes;
+  ServoSG90& Neck;
+  L298NMotor& Legs;
+
+  Robot(SonarHCSR04& eyes, ServoSG90& neck, L298NMotor& legs)
+    : RedLed(GPIOB, GPIO_Pin_8)
+    , GreenLed(GPIOB, GPIO_Pin_7)
+    , Eyes(eyes)
+    , Neck(neck)
+    , Legs(legs)
+  {
   }
-}
 
-/*
-void spi_test()
-{
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
+  void CheckAround()
+  {
+    RedLed.Enable(true);
 
-  Spi spi(SPI2);
-  spi.Test();
-}
-*/
+    Data.DistanceCenter = 0;
+    Data.DistanceLeft = 0;
+    Data.DistanceRight = 0;
 
+    Neck.Left();
+    //wait to turn servo in necessary state
+    if (Neck.GetAngle() <= 0)
+    {
+      Delay(500);
+    }
+    else
+    {
+      //need more time to turn from right
+      Delay(1000);
+    }
+    Eyes.Ping();
+    Delay(60);
+    Data.DistanceLeft = Eyes.GetLastResult();
+
+    Neck.Center();
+    //wait to turn servo in necessary state
+    Delay(500);
+    Eyes.Ping();
+    Delay(60);
+    Data.DistanceCenter = Eyes.GetLastResult();
+
+    Neck.Right();
+    //wait to turn servo in necessary state
+    Delay(500);
+    Eyes.Ping();
+    Delay(60);
+    Data.DistanceRight = Eyes.GetLastResult();
+
+    Neck.Center();
+    //wait to turn servo in necessary state
+    Delay(500);
+    RedLed.Enable(false);
+
+    trace_printf("CheckAround center: %u, left: %u, right: %u\n", Data.DistanceCenter, Data.DistanceLeft, Data.DistanceRight);
+    Data.Action = ACTION_ANALYZE;
+  }
+
+  void MakeDecision()
+  {
+    //Initial state or after full stop
+    if (Data.Action == Data.PrevAction && Data.Action == ACTION_STOP)
+    {
+      Data.Action = ACTION_EXAMINATION;
+      return;
+    }
+
+    if (Data.Action == ACTION_GO_AHEAD)
+    {
+      Data.Action = ACTION_CHECK_OBSTACLE;
+      return;
+    }
+
+    if (Data.Action == ACTION_GO_BACK)
+    {
+      Data.Action = ACTION_EXAMINATION;
+      return;
+    }
+
+    if (Data.Action == ACTION_TURN_LEFT)
+    {
+      Data.Action = ACTION_EXAMINATION;
+      return;
+    }
+
+    if (Data.Action == ACTION_TURN_RIGHT)
+    {
+      Data.Action = ACTION_EXAMINATION;
+      return;
+    }
+
+    if (Data.Action == ACTION_ANALYZE)
+    {
+      if (Data.DistanceCenter > 100)
+      {
+        Data.Action = ACTION_GO_AHEAD;
+        return;
+      }
+
+      //if we can move forward
+      if ((Data.DistanceLeft > 100) && (Data.DistanceLeft >= Data.DistanceRight))
+      {
+        Data.Action = ACTION_TURN_LEFT;
+        return;
+      }
+
+      //if we can move forward
+      if ((Data.DistanceRight > 100) && (Data.DistanceRight > Data.DistanceLeft))
+      {
+        Data.Action = ACTION_TURN_RIGHT;
+        return;
+      }
+
+      Data.Action = ACTION_STOP;
+    }
+
+  }
+
+  bool IsStateChanged()
+  {
+    return Data.Action != Data.PrevAction;
+  }
+
+  void Action()
+  {
+    Data.PrevAction = Data.Action;
+    //Data.Action = ACTION_ANALYZE;
+    switch(Data.Action)
+    {
+      case ACTION_STOP: Stop(); break;
+      case ACTION_EXAMINATION: Stop(); CheckAround(); break;
+      case ACTION_CHECK_OBSTACLE: CheckObstacle(); break;
+      case ACTION_IDLE: Stop(); Idle(); break;
+      case ACTION_GO_AHEAD: GoAhead(); break;
+      case ACTION_GO_BACK: Stop(); GoBack(); break;
+      case ACTION_TURN_LEFT: Stop(); GoLeft(); break;
+      case ACTION_TURN_RIGHT: Stop(); GoRight(); break;
+    }
+  }
+
+  void CheckObstacle()
+  {
+    RedLed.Enable(true);
+    if (!Neck.IsCenter())
+    {
+      Neck.Center();
+    }
+
+    //Update distance
+    Eyes.Ping();
+    Delay(60);
+    Data.DistanceCenter = Eyes.GetLastResult();
+    RedLed.Enable(false);
+    Data.Action = ACTION_ANALYZE;
+  }
+
+  void Idle()
+  {
+    Delay(100);
+  }
+
+  void Stop()
+  {
+    trace_printf("STOP\n");
+    Legs.SoftStop();
+  }
+
+  void GoAhead()
+  {
+    trace_printf("FORWARD\n");
+    Legs.Forward();
+  }
+
+  void GoBack()
+  {
+    trace_printf("BACK\n");
+    Legs.Back();
+    //Delay(1000);
+    Delay(500);
+  }
+
+  void GoLeft()
+  {
+    trace_printf("LEFT\n");
+    Legs.Left();
+    //Delay(1000);
+    Delay(500);
+  }
+
+  void GoRight()
+  {
+    trace_printf("RIGHT\n");
+    Legs.Right();
+    Delay(500);
+  }
+public:
+  State Data;
+};
 
 void robot()
 {
-
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
-
-
   SonarHCSR04 sonar(GPIOB, GPIO_Pin_15);
   ServoSG90 servo(TIM2, 2, GPIOA, GPIO_Pin_1);
   L298NMotor motor(GPIOA, GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_7,
                    GPIO_Pin_8, GPIO_Pin_9, GPIO_Pin_10);
+
+  Robot robot(sonar, servo, motor);
+
+  robot.Neck.Center();
+  //wait to turn servo in necessary state
+  Delay(1000);
+  //robot.CheckAround();
+  //robot.MakeDecision();
+
   while (true)
   {
-    motor.Forward();
-    servo.SetAngle(-90);
-    Delay(1000);
-    sonar.Ping();
-    motor.Right();
-    servo.SetAngle(-45);
-    Delay(1000);
-    trace_printf("sonar left: %u\n", sonar.GetLastResult());
-
-    motor.SoftStop();
-    servo.SetAngle(0);
-    Delay(1000);
-
-    servo.SetAngle(45);
-    Delay(1000);
-    servo.SetAngle(90);
-    Delay(1000);
-    sonar.Ping();
-    Delay(1000);
-    trace_printf("sonar right: %u\n", sonar.GetLastResult());
+    robot.MakeDecision();
+    trace_printf("prev: %u, action: %u\n", robot.Data.PrevAction, robot.Data.Action);
+    robot.Action();
+    robot.GreenLed.Enable(true);
+    Delay(100);
+    robot.GreenLed.Enable(false);
   }
-
-
+  //*/
 }
 
-int main(int argc, char* argv[])
+void initClock()
+{
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+}
+
+int main(int, char*[])
 {
   InitTimer();
-  //spi_test();
-  //motor();
-
+  initClock();
   robot();
-/*
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
-
-  SonarHCSR04 sonar(GPIOB, GPIO_Pin_15);
-
-  while (1)
-  {
-    sonar.Ping();
-    Delay(1000);
-    trace_printf("sonar: %u\n", sonar.GetLastResult());
-
-  }
-
-  //RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-  //RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-  //ServoSG90 servo(TIM2, 2, GPIOA, GPIO_Pin_1);
-/*
-  while (true)
-  {
-    servo.SetAngle(-90);
-    Delay(1000);
-    servo.SetAngle(-45);
-    Delay(1000);
-    servo.SetAngle(0);
-    Delay(1000);
-    servo.SetAngle(45);
-    Delay(1000);
-    servo.SetAngle(90);
-    Delay(1000);
-  }
-
- */
-
-  /*
-
-  // Enable PORTB Clock
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-
-  StepMotor motor(GPIOB, GPIO_Pin_6, GPIO_Pin_7, GPIO_Pin_8, GPIO_Pin_9);
-  while(1)
-  {
-      motor.StepMotorNextStep();
-
-    Delay(2);
-  }
-*/
-
-  /*
-  // Show the program parameters (passed via semihosting).
-  // Output is via the semihosting output channel.
-  trace_dump_args(argc, argv);
-
-  // Send a greeting to the trace device (skipped on Release).
-  trace_puts("Hello ARM World!");
-
-  // Send a message to the standard output.
-  puts("Standard output message.");
-
-  // Send a message to the standard error.
-  fprintf(stderr, "Standard error message.\n");
-
-  // At this stage the system clock should have already been configured
-  // at high speed.
-  trace_printf("System clock: %u Hz\n", SystemCoreClock);
-
-  Timer timer;
-  timer.start();
-
-  BlinkLed blinkLed;
-
-  // Perform all necessary initialisations for the LED.
-  blinkLed.powerUp();
-
-  uint32_t seconds = 0;
-
-#define LOOP_COUNT (5)
-  int loops = LOOP_COUNT;
-  if (argc > 1)
-    {
-      // If defined, get the number of loops from the command line,
-      // configurable via semihosting.
-      loops = atoi (argv[1]);
-    }
-
-  // Short loop.
-  for (int i = 0; i < loops; i++)
-    {
-      blinkLed.turnOn();
-      timer.sleep(i == 0 ? Timer::FREQUENCY_HZ : BLINK_ON_TICKS);
-
-      blinkLed.turnOff();
-      timer.sleep(BLINK_OFF_TICKS);
-
-      ++seconds;
-
-      // Count seconds on the trace device.
-      trace_printf("Second %u\n", seconds);
-    }
   return 0;
-  */
 }
 
 #pragma GCC diagnostic pop
-
-// ----------------------------------------------------------------------------

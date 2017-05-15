@@ -94,19 +94,20 @@ void SonarHCSR04::Ping()
 {
   int i;
 
+  SonarValue = 0;
   GPIO_SetBits(TriggerGPIOX, TriggerPin);
   //Delay 0x72000
-  //for(i=0;i<0x7200;i++);
-  Delay(1);
+  for(i=0;i<0x7200;i++);
+  //Delay(1);
   GPIO_ResetBits(TriggerGPIOX, TriggerPin);
 }
 
-uint32_t SonarHCSR04::GetLastResult()
+uint16_t SonarHCSR04::GetLastResult()
 {
   unsigned long Sonar;
-  Sonar = (unsigned long)SonarValue / (58.2);
+  //Sonar = (unsigned long)SonarValue / (58.2);
   Sonar = (354/2) * (unsigned long)SonarValue / (72000 / 72);
-  if (Sonar > 4000) Sonar = 4000;
-  if (Sonar < 20) Sonar = 20;
-  return (unsigned int)Sonar;
+  //if (Sonar > 4000) Sonar = 4000;
+  //if (Sonar < 20) Sonar = 20;
+  return (uint16_t)Sonar;
 }

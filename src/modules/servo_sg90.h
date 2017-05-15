@@ -11,6 +11,8 @@ public:
   void Left();
   void Right();
   void Center();
+
+  bool IsCenter() const;
   //-90..90
   void SetAngle(int8_t angle);
   int8_t GetAngle() const;

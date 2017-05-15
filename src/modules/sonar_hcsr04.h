@@ -13,7 +13,7 @@ public:
   virtual ~SonarHCSR04();
 
   void Ping();
-  uint32_t GetLastResult();
+  uint16_t GetLastResult();
 
 private:
   TIM_TypeDef* TIMX;
