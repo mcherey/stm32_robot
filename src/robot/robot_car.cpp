@@ -19,6 +19,7 @@ RobotCar::~RobotCar()
 
 void RobotCar::Execute()
 {
+  trace_printf("Statring robot main thread.\n");
   Neck.Center();
   //wait to turn servo in necessary state
   Delay(1000);
@@ -27,8 +28,8 @@ void RobotCar::Execute()
 
   while (true)
   {
-    MakeDecision();
-    trace_printf("prev: %u, action: %u\n", Data.PrevAction, Data.Action);
+    B.MakeDecision();
+    B.PrintState();
     Action();
     M.GreenLed(true);
     Delay(100);
@@ -40,13 +41,12 @@ void RobotCar::CheckAround()
 {
   M.RedLed(true);
 
-  Data.DistanceCenter = 0;
-  Data.DistanceLeft = 0;
-  Data.DistanceRight = 0;
+  B.ForgetDistance();
 
+  int8_t angle = Neck.GetAngle();
   Neck.Left();
   //wait to turn servo in necessary state
-  if (Neck.GetAngle() <= 0)
+  if (angle <= 0)
   {
     Delay(500);
   }
@@ -57,110 +57,45 @@ void RobotCar::CheckAround()
   }
   Eyes.Ping();
   Delay(60);
-  Data.DistanceLeft = Eyes.GetLastResult();
+  B.SetLeftDistance(Eyes.GetLastResult());
 
   Neck.Center();
   //wait to turn servo in necessary state
   Delay(500);
   Eyes.Ping();
   Delay(60);
-  Data.DistanceCenter = Eyes.GetLastResult();
+  B.SetCenterDistance(Eyes.GetLastResult());
 
   Neck.Right();
   //wait to turn servo in necessary state
   Delay(500);
   Eyes.Ping();
   Delay(60);
-  Data.DistanceRight = Eyes.GetLastResult();
+  B.SetRightDistance(Eyes.GetLastResult());
 
   Neck.Center();
   //wait to turn servo in necessary state
   Delay(500);
   M.RedLed(false);
 
-  trace_printf("CheckAround center: %u, left: %u, right: %u\n", Data.DistanceCenter, Data.DistanceLeft, Data.DistanceRight);
-  Data.Action = ACTION_ANALYZE;
-}
-
-void RobotCar::MakeDecision()
-{
-  //Initial state or after full stop
-  if (Data.Action == Data.PrevAction && Data.Action == ACTION_STOP)
-  {
-    Data.Action = ACTION_EXAMINATION;
-    return;
-  }
-
-  if (Data.Action == ACTION_GO_AHEAD)
-  {
-    Data.Action = ACTION_CHECK_OBSTACLE;
-    return;
-  }
-
-  if (Data.Action == ACTION_GO_BACK)
-  {
-    Data.Action = ACTION_EXAMINATION;
-    return;
-  }
-
-  if (Data.Action == ACTION_TURN_LEFT)
-  {
-    Data.Action = ACTION_EXAMINATION;
-    return;
-  }
-
-  if (Data.Action == ACTION_TURN_RIGHT)
-  {
-    Data.Action = ACTION_EXAMINATION;
-    return;
-  }
-
-  if (Data.Action == ACTION_ANALYZE)
-  {
-    if (Data.DistanceCenter > 100)
-    {
-      Data.Action = ACTION_GO_AHEAD;
-      return;
-    }
-
-    //if we can move forward
-    if ((Data.DistanceLeft > 100) && (Data.DistanceLeft >= Data.DistanceRight))
-    {
-      Data.Action = ACTION_TURN_LEFT;
-      return;
-    }
-
-    //if we can move forward
-    if ((Data.DistanceRight > 100) && (Data.DistanceRight > Data.DistanceLeft))
-    {
-      Data.Action = ACTION_TURN_RIGHT;
-      return;
-    }
-
-    Data.Action = ACTION_STOP;
-  }
-
-}
-
-bool RobotCar::IsStateChanged()
-{
-  return Data.Action != Data.PrevAction;
+  B.PrintState();
+  B.Analyze();
 }
 
 void RobotCar::Action()
 {
-  Data.PrevAction = Data.Action;
-  //Data.Action = ACTION_ANALYZE;
-  switch(Data.Action)
+  auto action = B.ReleaseAction();
+
+  switch(action)
   {
-    case ACTION_STOP: Stop(); break;
-    case ACTION_EXAMINATION: Stop(); CheckAround(); break;
-    case ACTION_CHECK_OBSTACLE: CheckObstacle(); break;
-    case ACTION_IDLE: Stop(); Idle(); break;
-    case ACTION_GO_AHEAD: GoAhead(); break;
-    case ACTION_GO_BACK: Stop(); GoBack(); break;
-    case ACTION_TURN_LEFT: Stop(); GoLeft(); break;
-    case ACTION_TURN_RIGHT: Stop(); GoRight(); break;
+    case Brain::ACTION_STOP: Stop(); break;
+    case Brain::ACTION_EXAMINATION: Stop(); CheckAround(); break;
+    case Brain::ACTION_CHECK_OBSTACLE: CheckObstacle(); break;
+    case Brain::ACTION_IDLE: Stop(); Idle(); break;
+    case Brain::ACTION_GO_AHEAD: GoAhead(); break;
+    case Brain::ACTION_GO_BACK: Stop(); GoBack(); break;
+    case Brain::ACTION_TURN_LEFT: Stop(); GoLeft(); break;
+    case Brain::ACTION_TURN_RIGHT: Stop(); GoRight(); break;
   }
 }
 
@@ -175,9 +110,9 @@ void RobotCar::CheckObstacle()
   //Update distance
   Eyes.Ping();
   Delay(60);
-  Data.DistanceCenter = Eyes.GetLastResult();
+  B.SetCenterDistance(Eyes.GetLastResult());
   M.RedLed(false);
-  Data.Action = ACTION_ANALYZE;
+  B.Analyze();
 }
 
 void RobotCar::Idle()

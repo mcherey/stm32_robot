@@ -18,6 +18,6 @@ public:
   virtual void SetAngle(int8_t angle);
   virtual int8_t GetAngle() const;
 private:
-  uint16_t Angle;
+  int8_t Angle;
 };
 

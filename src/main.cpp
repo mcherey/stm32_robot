@@ -47,11 +47,17 @@ void InitClock()
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 }
 
+void TestLCD()
+{
+
+}
+
 int main(int, char*[])
 {
   InitTimer();
   InitClock();
   BuildRobot();
+  //TestLCD();
   return 0;
 }
 
