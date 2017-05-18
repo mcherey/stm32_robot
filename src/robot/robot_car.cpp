@@ -23,8 +23,15 @@ void RobotCar::Execute()
   Neck.Center();
   //wait to turn servo in necessary state
   Delay(1000);
-  //robot.CheckAround();
-  //robot.MakeDecision();
+  //CheckAround();
+  //B.MakeDecision();
+
+  B.PrintState("Initial state");
+
+  //GoAhead();
+ // Delay(5000);
+  //GoBack();
+  //Delay(5000);
 
   while (true)
   {
@@ -88,14 +95,14 @@ void RobotCar::Action()
 
   switch(action)
   {
-    case Brain::ACTION_STOP: Stop(); break;
-    case Brain::ACTION_EXAMINATION: Stop(); CheckAround(); break;
-    case Brain::ACTION_CHECK_OBSTACLE: CheckObstacle(); break;
-    case Brain::ACTION_IDLE: Stop(); Idle(); break;
-    case Brain::ACTION_GO_AHEAD: GoAhead(); break;
-    case Brain::ACTION_GO_BACK: Stop(); GoBack(); break;
-    case Brain::ACTION_TURN_LEFT: Stop(); GoLeft(); break;
-    case Brain::ACTION_TURN_RIGHT: Stop(); GoRight(); break;
+    case ACTION_STOP: Stop(); break;
+    case ACTION_EXAMINATION: Stop(); CheckAround(); break;
+    case ACTION_CHECK_OBSTACLE: CheckObstacle(); break;
+    case ACTION_IDLE: Stop(); Idle(); break;
+    case ACTION_GO_AHEAD: GoAhead(); break;
+    case ACTION_GO_BACK: Stop(); GoBack(); break;
+    case ACTION_TURN_LEFT: Stop(); GoLeft(); break;
+    case ACTION_TURN_RIGHT: Stop(); GoRight(); break;
   }
 }
 

@@ -17,6 +17,8 @@ namespace Robot
 
     void Execute();
 
+  private:
+
     void CheckAround();
 
     void Action();
@@ -28,6 +30,7 @@ namespace Robot
     void GoLeft();
 
     void GoRight();
+
   private:
     Monitor& M;
 
