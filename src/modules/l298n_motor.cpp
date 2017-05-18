@@ -56,29 +56,29 @@ L298NMotor::~L298NMotor()
 void L298NMotor::LeftMotorsForward()
 {
   GPIO_WriteBit(GPIOX, EnA, Bit_SET);
-  GPIO_WriteBit(GPIOX, InA1, Bit_RESET);
-  GPIO_WriteBit(GPIOX, InA2, Bit_SET);
+  GPIO_WriteBit(GPIOX, InA1, Bit_SET);
+  GPIO_WriteBit(GPIOX, InA2, Bit_RESET);
+
 }
 
 void L298NMotor::LeftMotorsBack()
 {
   GPIO_WriteBit(GPIOX, EnA, Bit_SET);
-  GPIO_WriteBit(GPIOX, InA1, Bit_SET);
-  GPIO_WriteBit(GPIOX, InA2, Bit_RESET);
-}
+  GPIO_WriteBit(GPIOX, InA1, Bit_RESET);
+  GPIO_WriteBit(GPIOX, InA2, Bit_SET);}
 
 void L298NMotor::RightMotorsForward()
 {
   GPIO_WriteBit(GPIOX, EnB, Bit_SET);
-  GPIO_WriteBit(GPIOX, InB1, Bit_RESET);
-  GPIO_WriteBit(GPIOX, InB2, Bit_SET);
+  GPIO_WriteBit(GPIOX, InB1, Bit_SET);
+  GPIO_WriteBit(GPIOX, InB2, Bit_RESET);
 }
 
 void L298NMotor::RightMotorsBack()
 {
   GPIO_WriteBit(GPIOX, EnB, Bit_SET);
-  GPIO_WriteBit(GPIOX, InB1, Bit_SET);
-  GPIO_WriteBit(GPIOX, InB2, Bit_RESET);
+  GPIO_WriteBit(GPIOX, InB1, Bit_RESET);
+  GPIO_WriteBit(GPIOX, InB2, Bit_SET);
 }
 
 void L298NMotor::Forward()
