@@ -92,13 +92,9 @@ SonarHCSR04::~SonarHCSR04()
 
 void SonarHCSR04::Ping()
 {
-  int i;
-
   SonarValue = 0;
   GPIO_SetBits(TriggerGPIOX, TriggerPin);
-  //Delay 0x72000
-  for(i=0;i<0x7200;i++);
-  //Delay(1);
+  DelayUs(10);
   GPIO_ResetBits(TriggerGPIOX, TriggerPin);
 }
 

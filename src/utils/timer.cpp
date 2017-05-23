@@ -13,6 +13,24 @@ void InitTimer()
   {
    while(1);
   }
+
+  // DWT_Init
+  if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk))
+  {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  }
+#endif
+}
+
+void DelayUs(uint32_t time)
+{
+#ifdef STM32F10X_MD
+  int32_t tp = DWT->CYCCNT + time * (SystemCoreClock/1000000);
+  while (((int32_t)DWT->CYCCNT - tp) < 0);
+#else
+  usleep(time);
 #endif
 }
 

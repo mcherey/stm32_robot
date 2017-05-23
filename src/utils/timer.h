@@ -9,3 +9,4 @@
 void InitTimer();
 
 void Delay(uint32_t time);
+void DelayUs(uint32_t time); //max 29 seconds
