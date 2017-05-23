@@ -39,13 +39,14 @@ namespace Robot
     void SetCenterDistance(uint16_t distance);
 
     void PrintState(const char* msg = 0);
-    void Analyze();
-    void MakeDecision();
 
+    Action MakeDecision();
+    void DoNext(Action action);
     Action ReleaseAction();
 
   private:
-    void SetAction(Action state);
+    Action ChooseDirection();
+    Action Analyze();
   private:
     Memory State;
   };

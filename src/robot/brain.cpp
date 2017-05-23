@@ -3,6 +3,11 @@
 
 namespace Robot
 {
+  namespace Constants
+  {
+    const uint16_t MinDistance = 100;
+  }
+
 Brain::Brain()
 {
 }
@@ -45,88 +50,107 @@ Action Brain::ReleaseAction()
 {
   if (State.CurrentActionExecuted)
   {
-    trace_printf("[ERROR] Trying to execute already executed action. ToDo: %u, PrevAction: %u",
+    trace_printf("[ERROR] Trying to execute already executed action. ToDo: %u, PrevAction: %u\n",
                  State.ToDo, State.PrevAction);
   }
 
-  State.PrevAction = State.ToDo;
+  State.CurrentActionExecuted = true;
   return State.ToDo;
 }
 
-void Brain::SetAction(Action action)
+void Brain::DoNext(Action action)
 {
   if (!State.CurrentActionExecuted)
   {
-    trace_printf("[ERROR] Trying to set new action but current wasn't executed yet. New action: %u, ToDo: %u, PrevAction: %u",
+    trace_printf("[ERROR] Trying to set new action but current wasn't executed yet. New action: %u, ToDo: %u, PrevAction: %u\n",
                  action, State.ToDo, State.PrevAction);
   }
   State.PrevAction = State.ToDo;
   State.ToDo = action;
+  State.CurrentActionExecuted = false;
 }
 
-void Brain::Analyze()
+Action Brain::ChooseDirection()
 {
-  SetAction(ACTION_ANALYZE);
+  if ((State.DistanceCenter + State.DistanceLeft + State.DistanceRight) < Constants::MinDistance)
+  {
+    return ACTION_ANALYZE;
+  }
+
+  if (State.DistanceCenter >= 3 * Constants::MinDistance)
+  {
+    return ACTION_GO_AHEAD;
+  }
+
+  if ((State.DistanceLeft >= 100) && (State.DistanceLeft >= State.DistanceRight))
+  {
+    return ACTION_TURN_LEFT;
+  }
+
+  //if we can move forward
+  if ((State.DistanceRight >= 100) && (State.DistanceRight > State.DistanceLeft))
+  {
+    return ACTION_TURN_RIGHT;
+  }
+
+  return ACTION_GO_BACK;
 }
 
-void Brain::MakeDecision()
+Action Brain::Analyze()
+{
+  if (State.PrevAction == ACTION_STOP)
+  {
+    return ACTION_EXAMINATION;
+  }
+
+  if (State.PrevAction == ACTION_EXAMINATION)
+  {
+    return ChooseDirection();
+  }
+
+  if (State.PrevAction == ACTION_CHECK_OBSTACLE)
+  {
+    return ChooseDirection();
+  }
+
+  if (State.PrevAction == ACTION_GO_AHEAD)
+  {
+    return ACTION_CHECK_OBSTACLE;
+  }
+
+  if (State.PrevAction == ACTION_TURN_LEFT)
+  {
+    return ACTION_STOP;
+  }
+
+  if (State.PrevAction == ACTION_TURN_RIGHT)
+  {
+    return ACTION_STOP;
+  }
+
+  return ACTION_STOP;
+}
+
+Action Brain::MakeDecision()
 {
   //Initial state or after full stop
   if (State.ToDo == State.PrevAction && State.ToDo == ACTION_STOP)
   {
-    State.ToDo = ACTION_EXAMINATION;
-    return;
+    return ACTION_ANALYZE;
   }
 
-  if (State.ToDo == ACTION_GO_AHEAD)
+  if (State.ToDo != ACTION_ANALYZE)
   {
-    State.ToDo = ACTION_CHECK_OBSTACLE;
-    return;
+    trace_printf("[ERROR] No need to make decision. ToDo: %u, PrevAction: %u\n",
+                 State.ToDo, State.PrevAction);
+    return State.ToDo;
   }
 
-  if (State.ToDo == ACTION_GO_BACK)
-  {
-    State.ToDo = ACTION_EXAMINATION;
-    return;
-  }
-
-  if (State.ToDo == ACTION_TURN_LEFT)
-  {
-    State.ToDo = ACTION_EXAMINATION;
-    return;
-  }
-
-  if (State.ToDo == ACTION_TURN_RIGHT)
-  {
-    State.ToDo = ACTION_EXAMINATION;
-    return;
-  }
-
-  if (State.ToDo == ACTION_ANALYZE)
-  {
-    if (State.DistanceCenter > 100)
-    {
-      State.ToDo = ACTION_GO_AHEAD;
-      return;
-    }
-
-    //if we can move forward
-    if ((State.DistanceLeft > 100) && (State.DistanceLeft >= State.DistanceRight))
-    {
-      State.ToDo = ACTION_TURN_LEFT;
-      return;
-    }
-
-    //if we can move forward
-    if ((State.DistanceRight > 100) && (State.DistanceRight > State.DistanceLeft))
-    {
-      State.ToDo = ACTION_TURN_RIGHT;
-      return;
-    }
-
-    State.ToDo = ACTION_STOP;
-  }
-
+  auto wasToDo = State.ToDo;
+  auto wasPrevAction = State.PrevAction;
+  auto result = Analyze();
+  trace_printf("[ANALYZE] ToDo: %u, PrevAction: %u ==> %u\n",
+               wasToDo, wasPrevAction, result);
+  return result;
 }
-
 }

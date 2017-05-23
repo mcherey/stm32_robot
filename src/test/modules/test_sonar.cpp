@@ -15,6 +15,6 @@ void TestSonar::Ping()
 
 uint16_t TestSonar::GetLastResult()
 {
-  unsigned long Sonar = 1;
+  unsigned long Sonar = 120;
   return (uint16_t)Sonar;
 }
